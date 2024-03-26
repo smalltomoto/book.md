@@ -296,12 +296,16 @@ fn main()
    当我们确实需要深度复制string中堆上的数据，而不仅仅是栈上的数据，我们可以使用一个**clone**的通用函数。
 
    ```rust
-# fn main() {
-   let s1 = String::from("hello");
-let s2 = s1.clone();
-   println!("s1 = {}, s2 = {}", s1, s2);
-   # }
+   # fn main() {
+   
+      let s1 = String::from("hello");
+   let s2 = s1.clone();
+      println!("s1 = {}, s2 = {}", s1, s2);
+   
+      # }
    ```
+   # 
+   ```rust
    
    Rust有一个叫做**Copy trait**的特殊注解，可以用在类似整型这样的类型存储来栈上，如果一个类型实现了Copy trait那么一个旧的变量再赋值给一个新的变量后本身依旧仍然可用，而不是像string的移动一样。
    
@@ -321,7 +325,7 @@ let s2 = s1.clone();
 
 将值传递给函数与给变量赋值的原理类似 。向函数传递值可能会 移动或者复制，就像赋值语句一样。
 
-```rust
+​```rust
 fn main() {
 let s = String::from("hello"); // s 进入作用域
 takes_ownership(s); // s 的值移动到函数里 ...
@@ -340,7 +344,7 @@ println!("{}", some_string);
 fn makes_copy(some_integer: i32) { // some_integer 进入作用域
 println!("{}", some_integer);
 } // 这里，some_integer 移出作用域。没有特殊之处
-```
+   ```
 
 可以很明显发现，是否实现copy trait，在移动时存在很大的区别。
 
@@ -492,3 +496,195 @@ let s = String::from("hello"); // s 是一个新字符串
 • 引用必须**总是**有效的。
 
 接下来，我们来看看另一种不同类型的引用：**slice**。
+
+slice 允许你引用集合中一段连续的元素序列，而不用引用整个集合。slice是一类引用，所以他没有所有权，
+
+指向字符串中的一部风，当你获取索引后，可以直接把字符串截取出来很好用的功能，用法是：
+
+**let** hello = &s[0..5];
+
+**let** world = &s[6..11];
+
+&s[0..2] =  &s[..2]  初始索引如果不写的话那么直接从0开始。
+
+ASCII 字符集 与使用字符串存储 UTF-8 编码的文本”， 两者存在本质的区别，这是因为UTF-8中某些字符并不是单字符存储的。
+
+```rust
+fn first_word(s: &String) -> &str {
+let bytes = s.as_bytes();
+for (i, &item) in bytes.iter().enumerate() {
+if item == b' ' {
+return &s[0..i];
+}
+}
+&s[..]
+}
+
+```
+
+高效。
+
+**字符串字面值就是slice**
+
+字符串字面值呗存储在二进制文件中，现在知道了slice了，我们就可以正确理解字符串字面值了：
+
+let s= “Hello world”;
+
+这里s的类型是&str，它指向二进制程序特定的位置的slice。这也就是为什么字符串字面值都是不可变的；&str是一个不可变引用。
+
+字符串slice作为参数
+
+不要使用&String作为参数，&str更加通用，可以适用&string这种情况。这等加于整个“String”的slice。
+
+**其他类型的slice**
+
+```rust
+let a = [1, 2, 3, 4, 5];
+let slice = &a[1..3];
+assert_eq!(slice, &[2, 3]);
+```
+
+总结：
+
+所有权，借用和slice这些概念让rust程序在编译的时候确保内存安全。Rust语言提供了跟其他系统编程语言相同的方式来控制你的内存。但拥有数据所有者在离开作用域后自动清除其数据的功能意味着你无需额外编写和调试相关功能的控制代码。
+
+所有权系统影响了Rust中很多其他部分的工作方式，所以我们还会继续讲到这些概念，接下来让我们学习如何将多份数据组合进一个**struct**中。
+
+# 3.使用结构体组织关联的数据
+
+## 3.1结构体的定义和实例化
+
+结构体和我们在元组类型的部分讨论过的元组类似，但是元组的数据组织存在顺序，类似first，second来访问其中的元素，而结构中每个成员都存在对应的名字，因此我们可以更加方便的访问结构体中的数据。
+
+定义结构体，需要使用struct关键字并为整个结构体提供一个名字。结构体的名字需要描述它所组合的数据的意义。接着，在大括号中，定义每一部分数据的名字和类型，我们称之为字段field。例如，
+
+```rust
+struct User {
+active: bool,
+username: String,
+email: String,
+sign_in_count: u64,
+}
+```
+
+一旦定义结构体后，为了使用它，通过为每个字段指定具体值来创建这个结构体的实例。创建一个实例需要以结构体的名字开头，接着在大括号中使用key：value键-值对的形式提供字段，其中key是字段的名字，value是需要存储在字段中的数据值。实例中字段的顺序不需要和他们在结构体中声明的顺序一致，换句话说，结构体的定义就像一个类型的通用模板，而实例则会在这个模板中放入特定数据来创建这个类型的值。例如：
+
+```rust
+# struct User {
+# active: bool,
+# username: String,
+# email: String,
+# sign_in_count: u64,
+# }
+#
+fn main() {
+let user1 = User {
+active: true,
+username: String::from("someusername123"),
+email: String::from("someone@example.com"),
+sign_in_count: 1,
+};
+}
+
+user1.email = String::from("anotheremail@example.com");
+```
+
+采取.来获取结构体的数据。但是存在一个前提：整个实例必须是可变的；rust并不允许只将某个字段标记为可变的。另外需要注意同其他任何表达式一样，我们可以在函数体的最后一个表达式中构造一个结构体的新实例，来隐式地返回这个实例。
+
+```rust
+fn build_user(email: String, username: String) -> User {
+User {
+active: true,
+username: username,
+email: email,
+sign_in_count: 1,
+}
+}
+```
+
+**字段初始化简写语法**（*field init shorthand*）
+
+```rust
+fn build_user(email: String, username: String) -> User {
+User {
+active: true,
+username,
+email,
+sign_in_count: 1,
+}
+}
+#
+# fn main() {
+# let user1 = build_user(
+# String::from("someone@example.com"),
+# String::from("someusername123"),
+# );
+# }
+```
+
+使用旧实例的大部分值但改变其部分值来创建一个新的结构实例通常是很有用的。这可以通过结构体更新语法实现。
+
+```rust
+struct User{
+    active:bool,
+    username:String,
+    email:String,
+    sign_in_count:u64,
+}
+fn main ()
+{
+    let user1= User{
+        email:String::from(""),
+        username:String::from(""),
+        active:true,
+        sign_in_count:1,
+    }
+    let user2=User{
+        active:user1.active
+        username:User1.username,
+        email:String:;from(""),
+        sign_in_count:User1.sign_in_count,
+    }
+    // 
+    let user3 = User {
+email: String::from("another@example.com"),
+..user1
+        //..User1必须放在成员赋值的最后，以指定其余的字段应从user1的相应字段中获取值。
+};
+}
+```
+
+请注意：**结构更新语法就像带有= 的赋值，因为它引动了数据**。总体上说我们在创建user2后就不能再使用user1了，因为user1的username字段的String被移动到了user2中。如果我们给user2后不能再使用user1了，因为赋予新的String值，从而只使用user1的active和sign_in_count值，那么user1再创建user2后仍然有效。avtive和sign_in_count的类型是实现Copy trait的类型，所以这符合克隆的规则。
+
+### 3.1.2使用没有命名字段的元组结构来创建不同的类型
+
+也可以定义与元组类似的结构体，称为元组结构体（tuple struct）。元组结构体有着结构体名称提供的含义，但没有具体的字段名，只有字段的类型，当你想给整个元组取一个名字，并使元组成为与其他元组不同的类型时，元组结构是很有用的，这时就像常规结构体那样为每个字段命名就显得多余和形式化了。
+
+要定义元组结构体，以struct关键字和结构体名开头并后跟元组中的类型。例如下面两个分别叫做Color和Point元组结构体的定义和用法：
+
+```rust
+struct Color(i32, i32, i32);
+struct Point(i32, i32, i32);
+fn main() {
+let black = Color(0, 0, 0);
+let origin = Point(0, 0, 0);
+}
+```
+
+元组结构体不同的名字，即使其中的元素种类完全相同但是两者也是同的数据结构，比如一个获取Color类型参数的函数不能结构Point作为参数，元组结构体实例类似元组，既可以将他们解构为单独的部分，也可以使用点号后跟索引来访问单独的值，等等。
+
+### 3.1.3没有任何字段的类单元结构体
+
+我们也可以定义一个没有任何字段的结构体！他们被称为类单元结构体，因为他们类似于（），即元组类型一节中提到的unit类型。类单元结构体常常在你想要在某个类型上实现trait但不需要在类型中存储数据的时候发挥作用。
+
+```rust
+struct AlwaysEqual;
+fn main() {
+let subject = AlwaysEqual;
+}
+```
+
+后续会介绍其用法。
+
+### 3.1.4结构体数据的所有权
+
