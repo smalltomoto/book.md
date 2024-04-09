@@ -320,12 +320,13 @@ fn main()
    3. 所有浮点数类型：f64
    4. 字符类型：char
    5. 元组：当包含元素的类型都实现copy，那么此时可以认为元组是实现了copy。
+   ```
 
 ### 2.1.5所有权函数
 
 将值传递给函数与给变量赋值的原理类似 。向函数传递值可能会 移动或者复制，就像赋值语句一样。
 
-​```rust
+```rust
 fn main() {
 let s = String::from("hello"); // s 进入作用域
 takes_ownership(s); // s 的值移动到函数里 ...
@@ -336,6 +337,7 @@ makes_copy(x); // x 应该移动函数里，
 // 所以在后面可继续使用 x
 } // 这里，x 先移出了作用域，然后是 s。但因为 s 的值已被移走，
 // 没有特殊之处
+```
 
 fn takes_ownership(some_string: String) { // some_string 进入作用域
 println!("{}", some_string);
@@ -352,7 +354,7 @@ println!("{}", some_integer);
 
 返回值也可以转移所有权：
 
-```rust
+​```rust
 	fn main()
 {
     let s1 =give_ownership();    //return value
@@ -363,7 +365,7 @@ println!("{}", some_integer);
 // 所以什么也不会发生。s1 离开作用域并被丢弃
 
 
-```
+   ```
 
 变量的所有权总是遵守相同过的模式：
 
@@ -687,4 +689,6 @@ let subject = AlwaysEqual;
 后续会介绍其用法。
 
 ### 3.1.4结构体数据的所有权
+
+在**生命周期**中会涉及到，String类型存在所有权，而&str：slice类型没有所有权，可以被引用
 
