@@ -690,5 +690,451 @@ let subject = AlwaysEqual;
 
 ### 3.1.4结构体数据的所有权
 
-在**生命周期**中会涉及到，String类型存在所有权，而&str：slice类型没有所有权，可以被引用
+在**生命周期**中会涉及到，String类型存在所有权，而&str：slice类型没有所有权，可以使结构体存储被其他对象拥有的数据的引用，不过这么做的话需要用上生命周期，生命周期确保结构体引用的数据有效性跟结构体引用的数据有效性跟结构体本身保持一致。
+
+用结构体的引用来作为函数的参数，这样就可以借用结构体内部的数据了，而不是获取其所有权。
+
+### 3.1.5通过派生trait增加使用功能
+
+Rust确实包含了打印出调式信息的功能，不过我们必须为结构体显式选择这个功能。
+
+```rust
+#[derive(Debug)]
+println!("{:?}",rect1);
+println!("{:#?}",rect1);//当数据比较多的时候，输出的表现效果会更好
+或者使用dbg!宏
+但是两者存在差异，dbg!宏接受一个表达式的所有权(与println!相反，后者接受引用)
+```
+
+## 3.2方法语法
+
+```rust
+#[derive(Debug)]
+struct Rectangle{
+    width:u32,
+    heigh:u32,
+}
+impl Rectangle
+{
+    fn area(&self)-> u32{
+        self.width*self.heigh
+    }
+}
+
+fn main() 
+{
+let rect1=Rectangle{
+    width:30,
+    heigh:50,
+};
+println!("{}",rect1.area());
+}
+self是&Self的缩写
+```
+
+Rust并没有一个与->等效的运算符号，Rust有一个叫自动引用和解引用的功能：当使用object.something()调用方法时,Rust会自动为object添加&，&mut或者*，以便使object与方法签名匹配。也就是说这些代码是等价的，
+
+```rust
+#[derive(Debug,Copy,Clone)]
+struct Point
+{
+    x:f64,
+    y:f64,
+}
+impl Point{
+    fn distance(&self,other:&Point)->f64{
+        let x_squared=f64::powi(other.x-self.x,2);
+        let y_squared = f64::powi(other.y - self.y, 2);
+        f64::sqrt(x_squared + y_squared)
+    }
+}
+# let p1 = Point { x: 0.0, y: 0.0 };
+# let p2 = Point { x: 5.0, y: 6.5 };
+
+p1.distance(&p2);
+(&p1).distance(&p2);
+```
+
+在给出接收者和方法名的前提下，Rust可以明确地计算出方法是仅仅读取（&self），做出修改（&mut self）或者是获取所有权（self）。事实上，Rust对方法的接收者的隐式借用让所有权在实践中更友好。
+
+### 关联函数
+
+所有在impl块中定义的函数被称为关联函数，因为它们与impl后面命名的类型相关。我们可以定义不以self为第一参数的关联函数（所以不叫方法），因为他们并不作用于一个结构体的实例。
+
+不是方法的关联函数经常被用作返回一个结构体新实例的构造函数。这些函数的名称通常为 new ，但 new 并不是一个关键字。
+
+```rust
+# #[derive(Debug)]
+# struct Rectangle {
+# width: u32,
+# height: u32,
+# }
+#
+impl Rectangle {
+fn square(size: u32) -> Self {
+Self {
+width: size,
+height: size,
+}
+}
+}
+#
+# fn main() {
+# let sq = Rectangle::square(3);//这里用的是：：来调用这个关联函数。
+# }
+
+```
+
+### 多个impl块
+
+每个结构体都允许拥有多个 impl 块。例如，示例 5-16 中的代码等同于示例 5-15，但每个方法有其自己 的 impl 块。
+
+结构体让你可以创建出在你的领域中有意义的自定义类型。通过结构体，我们可以将相关联的数据片段 联系起来并命名它们，这样可以使得代码更加清晰。在 impl 块中，你可以定义与你的类型相关联的函 数，而方法是一种相关联的函数，让你指定结构体的实例所具有的行为。 但结构体并不是创建自定义类型的唯一方法：让我们转向 Rust 的枚举功能，为你的工具箱再添一个工具。
+
+# 枚举
+
+结构体给予你将字段和数据聚合在一起的方法，像 Rectangle 结构体有 width 和 height 两个字段。
+
+而 枚举给予你将一个值成为一个集合之一的方法。
+
+```rust
+enum IpAddrKind {
+V4,
+V6,
+}
+# fn main() {
+# let four = IpAddrKind::V4;
+# let six = IpAddrKind::V6;
+#
+# route(IpAddrKind::V4);
+# route(IpAddrKind::V6);
+# }
+fn route(ip_kind: IpAddrKind) {}
+
+
+# fn main() {
+enum IpAddrKind {
+V4,
+V6,
+}
+struct IpAddr {
+kind: IpAddrKind,
+address: String,
+}
+let home = IpAddr {
+kind: IpAddrKind::V4,
+address: String::from("127.0.0.1"),
+};
+let loopback = IpAddr {
+kind: IpAddrKind::V6,
+address: String::from("::1"),
+};
+# }
+
+# fn main() {
+enum IpAddr {
+V4(String),
+V6(String),
+}
+let home = IpAddr::V4(String::from("127.0.0.1"));
+let loopback = IpAddr::V6(String::from("::1"));
+# }
+我们直接将数据附加到枚举的每个成员上，这样就不需要一个额外的结构体了。这里也很容易看出枚举工作的另一个细节：我们每一个定义的枚举成员大的名字也变成了构建枚举的实例的函数。
+```
+
+枚举类型也可以定义其方法：这一点与结构体非常相似
+
+```rust
+# fn main() {
+# enum Message {
+# Quit,
+# Move { x: i32, y: i32 },
+# Write(String),
+# ChangeColor(i32, i32, i32),
+# }
+#
+impl Message {
+fn call(&self) {
+// 在这里定义方法体
+}
+}
+let m = Message::Write(String::from("hello"));
+m.call();
+# }
+```
+
+### Option枚举和其相对于空值的优势
+
+Option 类型应用广泛因为 它编码了一个非常普遍的场景，即一个值要么有值要么没值。
+
+```rust
+enum Option<T> {
+None,
+Some(T),
+}
+只要一个值不是 Option<T> 类型，你就 可以安全的认定它的值不为空。这是 Rust 的一个经过深思熟虑
+的设计决策，来限制空值的泛滥以增加 Rust 代码的安全性。
+
+```
+
+### match控制流结构
+
+Rust有一个叫做match的极为强大的控制流运算符，它允许我们将一个值与一系列的模式相比较，并根据相匹配的模式执行相应的代码。模式可由字面值，变量，通配符和许多其他内容构成。
+
+```rust
+enum Coin{
+    Penny,
+    Nickel,
+    Dime,
+    Quarter,
+}
+fn value_in_cents(coin:Coin)->u8{
+    match coin{
+        Coin::Penny =>1,
+        Coin::Nickel =>5,
+        Coin::Dime=>10,
+        Coin::Quarter =>25,
+    }
+}
+```
+
+Rust中的匹配时穷尽的，必须穷尽到最后的可能性来使代码有效。
+
+### 通配模式和_占位符号
+
+```rust
+# fn main() {
+let dice_roll = 9;
+match dice_roll {
+3 => add_fancy_hat(),
+7 => remove_fancy_hat(),
+other => move_player(other), //other会被使用
+}
+fn add_fancy_hat() {}
+fn remove_fancy_hat() {}
+fn move_player(num_spaces: u8) {}
+# }
+
+
+# fn main() {
+let dice_roll = 9;
+match dice_roll {
+3 => add_fancy_hat(),
+7 => remove_fancy_hat(),
+_ => reroll(), //占位符 或者可以写成 _ => (),
+}
+fn add_fancy_hat() {}
+fn remove_fancy_hat() {}
+fn reroll() {}
+# }
+```
+
+### if let 简洁控制流
+
+if lei 语法让我们以一种不那么冗长的方式结合if和let，来处理只匹配一个模式的值而忽略其他模式的情况。
+
+```rust
+# fn main() {
+let config_max = Some(3u8);
+if let Some(max) = config_max {
+println!("The maximum is configured to be {}", max);
+}
+# }
+换句话说，可以认为 if let 是 match 的一个语法糖，它当值匹配某一模式时执行代码而忽略所有其他值。
+```
+
+用于解决match使用起来过于啰嗦的情况。
+
+### 使用包，Crate和模块管理不断增长的项目
+
+这里有一个需要说明的概念 ” 作用域（scope）”：代码所在的嵌套上下文有一组定义为 ”in scope” 的名 称。
+
+Rust有许多功能可以让你管理代码的组织，包括哪些内容可以被公开，哪些内容作为私有部分，以及程序每个作用域的名字，这系统功能被统称为模块系统，包括，
+包：（Packages）：cargo的一个功能，允许你构建，测试和分享crate
+
+Crates：一个模块的树形结构，它形成了库或者二进制文件
+
+模块：（Modules）和use，允许你控制作用域和路径的私有性。
+
+路径（path):一个命名例如结构体，函数或者模块等项的方式
+
+### 包和Crate
+
+crate是rust编译时的最小单位。
+cargo new project 来创建项目
+cargo build project 来编译项目
+cargo run 来运行项目
+
+### 定义模块来控制作用域与私有性
+
+从crate根节点开始寻找需要被编译的代码，通常对于一个库crate而言是src/lib.rs,对于一个二进制crate而言是src/main.rs
+
+```powershell
+New-Item -ItemType File -Name lib.rs 在当前目录下创建文件
+```
+
+声明模块：在crate根节点以外的其他文件中，你可以定义子模块。
+
+模块中的代码路径：一旦一个模块是你crate的一部分，你可以在隐私规则允许的前提下，从同一个crate内的任意地方，通过代码路径引用该模块的代码。
+
+私有vs公有：一个模块里的代码默认对其父模块私有。为了使一个模块公用，应当在声明时使用pub mod 代替mod。为了使一个公用模块内部的成员公用，应当在声明前使用pub。
+
+use关键字：在作用域内，use关键字创建了一个成员的快捷方式，用来减少长路径的重复。在任何可以引用
+
+```rust
+mod front_of_house{
+    mod hosting{
+        fn add_to_waitlist(){
+
+        }
+        fn seat_at_table(){
+
+        }
+    }
+    mod serving{
+        fn take_order(){
+
+        }
+        fn serve_order() {}
+        fn take_payment() {}
+    }
+}
+```
+
+mod称为模块。
+
+父模块中的项不能使用子模块的私有项，但是子模块中的项可以使用他们父模块中的项，这是因为子模块封装并隐藏了他们的实现详情。
+
+模块上的pub关键字只允许其父模块使用它，而不允许访问内部代码。
+
+### super开始的相对路径
+
+```rust
+fn deliver_order() {}
+mod back_of_house {
+fn fix_incorrect_order() {
+cook_order();
+super::deliver_order();
+}
+fn cook_order() {}
+}
+//有一种返回上层的感觉
+```
+
+### 创建公有的结构体和枚举
+
+如果我们在一个结构体定义的面前使用了pub，那么这个结构体会变成公有的，但是这个结构体的字段任然是私有的！
+
+```rust
+mod back_of_house{
+    pub struct Breakfast{
+        pub toast:String,
+        seasonal_fruits:String,
+    }
+    impl Breakfast {
+        pub fn summer(toast:&str)->Breakfast{
+            Breakfastz{
+                toast:String::from(toast),
+                seasonal_frust:String::from("peaches"),
+            }
+        }
+    }
+}
+pub fn eat_at_restaurant(){
+    let mut meal =back_of_house::Breakfast::summer("Rye");
+    meal.toast=String::from("wheat");
+    println!("{}",meal.toast);
+}
+```
+
+因为back_of_house::Breakfast结构体的toast字段是公有 的，所以我们可以在eat_at_restaurant中使用点号来随意的读写toast字段，但是不能使用私有的字段。
+
+以为结构体中存在私有的字段，那么这个结构体需要提供一个公共的关联函数来构造Breakfast的实例，因为我们不能在模块外部的函数中设置私有字段的值。
+
+但是，相反的是如果我们将一个枚举设置为公有，那么枚举中的所有成员都会变成公有。
+
+默认情况下我们会将结构体的成员视为全部私有，如果没有pub关键字，而枚举类型的成员就是全部公有，两者做了一个区分。
+
+### 使用use关键字将路径引入作用域
+
+注意use只能创建use所在的特定作用域内的短路径。
+
+```rust
+mod front_of_house {
+pub mod hosting {
+pub fn add_to_waitlist() {}
+}
+}
+use crate::front_of_house::hosting::add_to_waitlist;
+pub fn eat_at_restaurant() {
+add_to_waitlist();
+}
+//使用示例
+```
+
+有时我们会遇到一个情况：
+那就是我们想使用 use 语句将两个具有相同名称的项带入作用域
+
+```rust
+use std::fmt;
+use std::io;
+fn function1() -> fmt::Result {
+// --snip--
+# Ok(())
+}
+fn function2() -> io::Result<()> {
+// --snip--
+# Ok(())
+}
+//解决方案就是给以名字一个新的名字，使用as关键字
+use std::fmt::Result;
+use std::io::Result as IoResult;
+fn function1() -> Result {
+// --snip--
+# Ok(())
+}
+fn function2() -> IoResult<()> {
+// --snip--
+# Ok(())
+}
+```
+
+### 使用pub as重导出名称
+
+使用use关键字，将某一个名称导入当前的作用域后，这个名称在作用域中就可以使用了，但它对此作用域之外还是私有的，如果想要其他人调用我们的代码时，也能正常使用这个名称，就好像它本来就在当前作用域一样，那我们就可以将pub和use合起来使用。这种技术被称为重导出。我们不仅将一个名称导入了当前作用域，还允许别人把它导入他们自己的作用域。
+
+### 使用外部包
+
+需要再Cargo.toml文件中添加需要使用的包，然后通过use 引入包就可以了。
+
+### 嵌套路径来消除大量的use行
+
+```rust
+use std::{cmp::Ordering, io};
+use std::io::{self, Write};
+
+```
+
+### 通过glob运算符将所有的公有定义引入作用域
+
+```RUST
+use std::collections::*;
+```
+
+这个 use 语句将 std:: collections 中定义的所有公有项引入当前作用域。
+
+### 将模块拆分成多个文件
+
+## 常见集合
+
+Rust标准库中包含一系列被称为**集合**的非常有用的数据结构。大部分其他数据类型都代表一个特定的值，不过集合可以包含多个值。（数组？）
+
+不同于内建的数组和元组类型，这些集合指向的数据是存储再堆上的，这意味着数据的数量不必在编译的时候就已知。
+
+广泛使用的集合分为三个：
+**vector**：允许我们一个挨着一个地存储一系列数量可变的值。
+**string**：是字符的集合。
+**哈希map**：键和值。
+
+### 使用 Vector 储存列表
 
